@@ -1,0 +1,884 @@
+{% extends 'layout.html' %} {% block content %}
+
+<style>
+  .details {
+    display: none;
+  }
+
+  .active-row {
+    background-color: #f8f9fa;
+  }
+
+  .clickable-row-buddies,
+  .clickable-row-esners {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .clickable-row-buddies:hover,
+  .clickable-row-esners:hover {
+    background-color: #f8f9fa;
+  }
+
+  .scrollable-table-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.375rem;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 2;
+    border: none;
+    font-weight: 500;
+    color: #6c757d;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  thead th:hover {
+    background-color: #e9ecef;
+  }
+
+  thead th.sorted-asc::after {
+    content: " ↑";
+    color: #0d6efd;
+  }
+
+  thead th.sorted-desc::after {
+    content: " ↓";
+    color: #0d6efd;
+  }
+
+  table {
+    border: none !important;
+  }
+
+  table td, table th {
+    border: none !important;
+    border-bottom: 1px solid #f8f9fa !important;
+  }
+
+  .table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+
+  .bg-danger {
+    background-color: #f8d7da !important;
+  }
+
+  .text-danger {
+    font-weight: 600;
+  }
+
+  .details td {
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+    padding: 1rem !important;
+  }
+</style>
+
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-sm-6">
+      <h2 class="text-center text-primary mb-3">
+        Buddies <span class="text-muted fs-6">({{ buddies | length }})</span>
+      </h2>
+      <div class="input-group mb-3">
+        <input
+          type="text"
+          id="buddies-search"
+          class="form-control border-0 shadow-sm"
+          placeholder="Search buddies..."
+        />
+      </div>
+      <div class="scrollable-table-container">
+        <table class="table table-hover" id="buddiesTable">
+          <thead>
+            <tr>
+              <th onclick="sortBuddiesTable(0)">ID</th>
+              <th onclick="sortBuddiesTable(1)">Name</th>
+              <th onclick="sortBuddiesTable(2)">Gender</th>
+              <th onclick="sortBuddiesTable(3)">Nationality</th>
+            </tr>
+          </thead>
+          <tbody id="buddies-table">
+            {% for buddy in buddies %}
+            <tr class="clickable-row-buddies" data-id="{{ buddy.id }}">
+              <td class="{% if buddy.esn_member_id is not none %} bg-danger {% endif %}">
+                {{buddy.id}}
+              </td>
+              <td>{{buddy.name}}</td>
+              <td>{{buddy.gender}}</td>
+              <td>{% for n in buddy.get_nationality() %} {{n}}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            </tr>
+            <tr class="details" id="details-buddies-{{buddy.id}}">
+              <td colspan="4">
+                <p><strong>Surname:</strong> <span class="text-muted">{{buddy.surname}}</span></p>
+                <p><strong>Languages:</strong>
+                  <span class="buddy-languages text-muted">
+                    {% for n in buddy.get_languages_spoken() %} {{ n }}{% if not loop.last %}, {% endif %} {% endfor %}
+                  </span>
+                </p>
+                <p><strong>Faculty:</strong>
+                  <span class="buddy-faculty text-muted">
+                    {% for n in buddy.get_faculty() %} {{ n }}{% if not loop.last %}, {% endif %} {% endfor %}
+                  </span>
+                </p>
+                <p><strong>Interests:</strong>
+                  <span class="buddy-interests text-muted">
+                    {% for n in buddy.get_interests() %} {{ n }}{% if not loop.last %}, {% endif %} {% endfor %}
+                  </span>
+                </p>
+                <p><strong>Description:</strong> <span class="text-muted">{{buddy.description}}</span></p>
+                <p><strong>Semester:</strong> <span class="text-muted">{{buddy.semester}}</span></p>
+                <p><strong>Year:</strong> <span class="text-muted">{{buddy.year}}</span></p>
+                <p><strong>Phone:</strong> <span class="text-muted">{{ buddy.phone_number }}</span></p>
+                <p><strong>Email:</strong> <span class="text-muted">{{buddy.email}}</span></p>
+                <p><strong>Instagram:</strong> 
+                  {% if buddy.instagram %}
+                  <a href="https://www.instagram.com/{{ buddy.instagram }}" 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     class="text-decoration-none text-primary">
+                     <i class="bi bi-instagram"></i> @{{ buddy.instagram }}
+                  </a>
+                  {% else %}
+                  <span class="text-muted">-</span>
+                  {% endif %}
+                </p>
+                <p><strong>Telegram:</strong> <span class="text-muted">{{ buddy.telegram or '-' }}</span></p>
+                <p><strong>Esner:</strong> <span class="text-muted">{{buddy.esn_member_id or 'Not assigned' }}</span></p>
+                <div class="mt-2">
+                  {% if buddy.esn_member_id != None %}
+                  <button class="btn btn-sm btn-outline-warning unmatch-button" data-buddy-id="{{ buddy.id }}">
+                    <i class="bi bi-unlink"></i> UnMatch
+                  </button>
+                  {% endif %} 
+                  {% if (g.esner.buddy_program_admin or g.esner.admin) %}
+                  <button class="btn btn-sm btn-outline-danger remove-buddy-button" data-buddy-id="{{ buddy.id }}">
+                    <i class="bi bi-trash"></i> Remove Buddy
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="col-sm-6">
+      <h2 class="text-center text-primary mb-3">ESNers</h2>
+      <div class="input-group mb-3">
+        <input
+          type="text"
+          id="esners-search"
+          class="form-control border-0 shadow-sm"
+          placeholder="Search esners..."
+        />
+      </div>
+      <div class="scrollable-table-container">
+        <table class="table table-hover" id="esnersTable">
+          <thead>
+            <tr>
+              <th onclick="sortEsnersTable(0)">ID</th>
+              <th onclick="sortEsnersTable(1)">Name</th>
+              <th onclick="sortEsnersTable(2)">Wants Gender</th>
+              <th onclick="sortEsnersTable(3)">Wants Nationality</th>
+              <th onclick="sortEsnersTable(4)">N° Buddies</th>
+            </tr>
+          </thead>
+          <tbody id="esners-table">
+            {% for esner in esners %}
+            <tr class="clickable-row-esners" data-id="{{esner.id}}">
+              <td class=" {% if not esner.is_active %} bg-warning {% endif %}">{{esner.id}}</td>
+              <td>{{esner.name}}</td>
+              <td>{{esner.gender}}</td>
+              <td>{% for n in esner.get_nationality() %} {{n}}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+              <td>{{ esner.buddies | length }}</td>
+            </tr>
+            <tr class="details" id="details-esners-{{esner.id}}">
+              <td colspan="5">
+                <p><strong>Surname:</strong> <span class="text-muted">{{esner.surname}}</span></p>
+                <p><strong>Type:</strong> <span class="text-muted">{{esner.type}}</span></p>
+                <p><strong>Languages:</strong>
+                  <span class="esner-languages text-muted">
+                    {% for n in esner.get_languages_spoken() %} {{ n }}{% if not loop.last %}, {% endif %} {% endfor %}
+                  </span>
+                </p>
+                <p><strong>Faculty:</strong>
+                  <span class="esner-faculty text-muted">
+                    {% for n in esner.get_faculty() %} {{ n }}{% if not loop.last %}, {% endif %} {% endfor %}
+                  </span>
+                </p>
+                <p><strong>Interests:</strong>
+                  <span class="esner-interests text-muted">
+                    {% for n in esner.get_interests() %} {{ n }}{% if not loop.last %}, {% endif %} {% endfor %}
+                  </span>
+                </p>
+                <p><strong>Description:</strong> <span class="text-muted">{{esner.description}}</span></p>
+                <p><strong>Max Buddies:</strong> <span class="text-muted">{{esner.max_number_of_buddy}}</span></p>
+                <p><strong>Buddies IDs:</strong> 
+                  <span class="text-muted">
+                    {% for b in esner.buddies %}{{b.id}}{% if not loop.last %}, {% endif %}{% else %}None{% endfor %}
+                  </span>
+                </p>
+                <p><strong>Email:</strong> <span class="text-muted">{{esner.email}}</span></p>
+                <p><strong>Phone:</strong> <span class="text-muted">{{esner.phone_number}}</span></p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-sm-12 text-center mt-4">
+      <button class="btn btn-success" id="match-button">
+        <i class="bi bi-link"></i> Match
+      </button>
+      {% if g.esner.buddy_program_admin or g.esner.admin %}
+      <button class="btn btn-primary" id="export-button">
+        <i class="bi bi-file-earmark-excel"></i> Generate Excel Report
+      </button>
+      <button class="btn btn-warning" id="export-and-remove-button">
+        <i class="bi bi-file-earmark-excel"></i> Export Period & Remove All
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title text-primary" id="confirmationModalLabel">Confirm Match</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-muted" id="confirmationModalBody"></div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="confirm-match-button">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Unmatch Modal -->
+<div class="modal fade" id="confirmationUnmatchModal" tabindex="-1" aria-labelledby="confirmationUnmatchModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title text-warning" id="confirmationUnmatchModalLabel">Confirm UnMatch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-muted" id="confirmationUnmatchModalBody"></div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-secondary"
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-warning" id="confirm-unmatch-button">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Everyone Modal -->
+<div class="modal fade" id="confirmationRemoveEveryoneModal" tabindex="-1" aria-labelledby="confirmationRemoveEveryoneModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title text-danger" id="confirmationRemoveEveryoneLabel">Confirm Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-danger" id="confirmationRemoveEveryoneModalBody">
+        <p class="mb-2"><strong>⚠️ WARNING ⚠️</strong></p>
+        <p>Are you really sure you want to remove ALL people (Buddies and ESNers) from the database?</p>
+        <p class="text-muted">Only ESNers who have a role within the portal will remain.</p>
+        <p class="text-muted">An Excel report will be generated before deletion.</p>
+      </div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-remove-everyone-button">
+          <i class="bi bi-exclamation-triangle"></i> Remove Everyone
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Buddy Modal -->
+<div class="modal fade" id="removeBuddyModal" tabindex="-1" aria-labelledby="removeBuddyModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title text-danger" id="removeBuddyModalLabel">Remove Buddy</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-muted" id="removeBuddyModalBody"></div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-remove-buddy-button">Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Period and Remove All Modal -->
+<div class="modal fade" id="exportPeriodModal" tabindex="-1" aria-labelledby="exportPeriodModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title text-warning" id="exportPeriodModalLabel">Export Period & Remove All</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle"></i>
+          <strong>Warning:</strong> This will export Erasmus students from the specified period and then remove ALL buddies from the database.
+        </div>
+        <form id="export-period-form">
+          <div class="mb-3">
+            <label for="semester-select" class="form-label">Semester</label>
+            <select class="form-select" id="semester-select" required>
+              <option value="">Select Semester</option>
+              <option value="Winter">Winter (September-January)</option>
+              <option value="Summer">Summer (February-August)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="year-input" class="form-label">Year</label>
+            <input type="number" class="form-control" id="year-input" min="2020" max="2030" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" id="confirm-export-period-button">
+          <i class="bi bi-file-earmark-excel"></i> Export & Remove All
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // Sorting functionality for tables
+  let buddySortDirection = {};
+  let esnerSortDirection = {};
+
+  function sortBuddiesTable(columnIndex) {
+    const table = document.getElementById("buddiesTable");
+    const tbody = table.getElementsByTagName("tbody")[0];
+    const rows = Array.from(tbody.getElementsByTagName("tr")).filter(row => !row.classList.contains('details'));
+    const headers = table.getElementsByTagName("th");
+    
+    buddySortDirection[columnIndex] = buddySortDirection[columnIndex] === 'asc' ? 'desc' : 'asc';
+    
+    Array.from(headers).forEach(header => {
+      header.classList.remove('sorted-asc', 'sorted-desc');
+    });
+    
+    headers[columnIndex].classList.add(buddySortDirection[columnIndex] === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    
+    rows.sort((a, b) => {
+      const aValue = a.getElementsByTagName("td")[columnIndex].textContent.trim();
+      const bValue = b.getElementsByTagName("td")[columnIndex].textContent.trim();
+      
+      const aNum = parseFloat(aValue);
+      const bNum = parseFloat(bValue);
+      
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return buddySortDirection[columnIndex] === 'asc' ? aNum - bNum : bNum - aNum;
+      } else {
+        if (buddySortDirection[columnIndex] === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      }
+    });
+    
+    // Rebuild table with sorted rows and their details
+    const allRows = [];
+    rows.forEach(row => {
+      allRows.push(row);
+      const detailsRow = document.getElementById(`details-buddies-${row.dataset.id}`);
+      if (detailsRow) allRows.push(detailsRow);
+    });
+    
+    allRows.forEach(row => tbody.appendChild(row));
+  }
+
+  function sortEsnersTable(columnIndex) {
+    const table = document.getElementById("esnersTable");
+    const tbody = table.getElementsByTagName("tbody")[0];
+    const rows = Array.from(tbody.getElementsByTagName("tr")).filter(row => !row.classList.contains('details'));
+    const headers = table.getElementsByTagName("th");
+    
+    esnerSortDirection[columnIndex] = esnerSortDirection[columnIndex] === 'asc' ? 'desc' : 'asc';
+    
+    Array.from(headers).forEach(header => {
+      header.classList.remove('sorted-asc', 'sorted-desc');
+    });
+    
+    headers[columnIndex].classList.add(esnerSortDirection[columnIndex] === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    
+    rows.sort((a, b) => {
+      const aValue = a.getElementsByTagName("td")[columnIndex].textContent.trim();
+      const bValue = b.getElementsByTagName("td")[columnIndex].textContent.trim();
+      
+      const aNum = parseFloat(aValue);
+      const bNum = parseFloat(bValue);
+      
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return esnerSortDirection[columnIndex] === 'asc' ? aNum - bNum : bNum - aNum;
+      } else {
+        if (esnerSortDirection[columnIndex] === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      }
+    });
+    
+    // Rebuild table with sorted rows and their details
+    const allRows = [];
+    rows.forEach(row => {
+      allRows.push(row);
+      const detailsRow = document.getElementById(`details-esners-${row.dataset.id}`);
+      if (detailsRow) allRows.push(detailsRow);
+    });
+    
+    allRows.forEach(row => tbody.appendChild(row));
+  }
+
+  $(document).ready(function () {
+    // This function highlights common items between the Buddy and ESNer detail rows.
+    function highlightCommonAttributes() {
+      // Find visible details rows from both tables.
+      var buddyDetails = $("#buddies-table .details:visible");
+      var esnerDetails = $("#esners-table .details:visible");
+
+      // Ensure that one Buddy and one ESNer detail row are visible.
+      if (buddyDetails.length && esnerDetails.length) {
+        // Get the container elements for each attribute.
+        var buddyNationalityEl = buddyDetails.find(".buddy-nationality");
+        var buddyLanguagesEl = buddyDetails.find(".buddy-languages");
+        var buddyFacultyEl = buddyDetails.find(".buddy-faculty");
+        var buddyInterestsEl = buddyDetails.find(".buddy-interests");
+
+        var esnerNationalityEl = esnerDetails.find(".esner-nationality");
+        var esnerLanguagesEl = esnerDetails.find(".esner-languages");
+        var esnerFacultyEl = esnerDetails.find(".esner-faculty");
+        var esnerInterestsEl = esnerDetails.find(".esner-interests");
+
+        // Helper function: compares two text fields that contain comma-separated items,
+        // then wraps the common items in <span class="text-primary">.
+        function highlightField(buddyEl, esnerEl) {
+          var buddyText = buddyEl.text();
+          var esnerText = esnerEl.text();
+
+          // Split text into arrays (and trim spaces).
+          var buddyItems = buddyText
+            .split(",")
+            .map((item) => item.trim())
+            .filter((item) => item !== "");
+          var esnerItems = esnerText
+            .split(",")
+            .map((item) => item.trim())
+            .filter((item) => item !== "");
+
+          // Find common items.
+          var common = buddyItems.filter(
+            (item) => esnerItems.indexOf(item) !== -1
+          );
+
+          // Create new HTML for buddy field.
+          var buddyHtml = buddyItems
+            .map((item) => {
+              if (common.indexOf(item) !== -1) {
+                return '<span class="text-danger">' + item + "</span>";
+              }
+              return item;
+            })
+            .join(", ");
+
+          // Create new HTML for ESNer field.
+          var esnerHtml = esnerItems
+            .map((item) => {
+              if (common.indexOf(item) !== -1) {
+                return '<span class="text-danger">' + item + "</span>";
+              }
+              return item;
+            })
+            .join(", ");
+
+          // Replace the content with the highlighted version.
+          buddyEl.html(buddyHtml);
+          esnerEl.html(esnerHtml);
+        }
+
+        // Apply highlighting for each field.
+        highlightField(buddyNationalityEl, esnerNationalityEl);
+        highlightField(buddyLanguagesEl, esnerLanguagesEl);
+        highlightField(buddyFacultyEl, esnerFacultyEl);
+        highlightField(buddyInterestsEl, esnerInterestsEl);
+      }
+    }
+
+    function checkAndHighlight() {
+      // Call the highlight function if both detail rows are visible.
+      if (
+        $("#buddies-table .details:visible").length &&
+        $("#esners-table .details:visible").length
+      ) {
+        highlightCommonAttributes();
+      }
+    }
+
+    $(".clickable-row-buddies").on("click", function () {
+      const id = $(this).data("id");
+      const detailsRow = $(`#details-buddies-${id}`);
+
+      // Close any open details rows in the buddies table
+      $("#buddies-table .details").not(detailsRow).hide();
+      $("#buddies-table .clickable-row-buddies")
+        .not(this)
+        .removeClass("active-row");
+
+      // Toggle the clicked row
+      detailsRow.toggle();
+      $(this).toggleClass("active-row");
+      checkAndHighlight();
+    });
+
+    $(".clickable-row-esners").on("click", function () {
+      const id = $(this).data("id");
+      const detailsRow = $(`#details-esners-${id}`);
+
+      // Close any open details rows in the esners table
+      $("#esners-table .details").not(detailsRow).hide();
+      $("#esners-table .clickable-row-esners")
+        .not(this)
+        .removeClass("active-row");
+
+      // Toggle the clicked row
+      detailsRow.toggle();
+      $(this).toggleClass("active-row");
+      checkAndHighlight();
+    });
+
+    $("#match-button").on("click", function () {
+      const activeBuddyId = $("#buddies-table .active-row").data("id");
+      const activeEsnerId = $("#esners-table .active-row").data("id");
+      if (activeBuddyId && activeEsnerId) {
+        const modalBody = document.getElementById("confirmationModalBody");
+        modalBody.textContent =
+          "Are you sure to match the buddy: " +
+          activeBuddyId +
+          " with the esner: " +
+          activeEsnerId;
+        $("#confirmationModal").modal("show");
+      } else {
+        showModal("Info", "Please select both a buddy and an ESNer.");
+      }
+    });
+
+    $("#confirm-match-button").on("click", function () {
+      const activeBuddyId = $("#buddies-table .active-row").data("id");
+      const activeEsnerId = $("#esners-table .active-row").data("id");
+      const matchButton = $("#confirm-match-button");
+
+      if (activeBuddyId && activeEsnerId) {
+        matchButton.prop("disabled", true);
+        matchButton.html(
+          '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Matching...'
+        );
+
+        $.ajax({
+          type: "POST",
+          url: "/buddyprogram/match/confirm_match",
+          data: JSON.stringify({
+            buddy_id: activeBuddyId,
+            esner_id: activeEsnerId,
+          }),
+          contentType: "application/json",
+          success: function (response) {
+            $("#confirmationModal").modal("hide");
+            showModal("Success", "Match confirmed successfully!");
+            // Optionally, you can reload the page or update the tables with the new data
+            location.reload();
+          },
+          error: function (error) {
+            $("#confirmationModal").modal("hide");
+            console.log(error);
+            showModal("ERROR", error.responseJSON.error);
+            matchButton.prop("disabled", false);
+            matchButton.html("Confirm");
+          },
+        });
+      } else {
+        $("#confirmationModal").modal("hide");
+        showModal("Info", "Please select both a buddy and an ESNer.");
+      }
+    });
+
+    $(".unmatch-button").on("click", function (e) {
+      e.stopPropagation(); // Prevent any parent handlers from being invoked
+      // Use the data attribute to get the buddy id
+      const buddyId = $(this).data("buddy-id");
+      if (buddyId) {
+        const modalBody = document.getElementById(
+          "confirmationUnmatchModalBody"
+        );
+        modalBody.textContent = "Are you sure to unmatch the buddy: " + buddyId;
+        $("#confirmationUnmatchModal").modal("show");
+
+        // Optionally, store the buddy id in the confirm button's data attribute
+        $("#confirm-unmatch-button").data("buddy-id", buddyId);
+      } else {
+        showModal("Info", "Please select a buddy");
+      }
+    });
+
+    $("#confirm-unmatch-button").on("click", function () {
+      const activeBuddyId = $("#buddies-table .active-row").data("id");
+      const unMatchButton = $("#confirm-unmatch-button");
+
+      if (activeBuddyId) {
+        unMatchButton.prop("disabled", true);
+        unMatchButton.html(
+          '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Unmatching...'
+        );
+
+        $.ajax({
+          type: "POST",
+          url: "/buddyprogram/match/remove_match",
+          data: JSON.stringify({ buddy_id: activeBuddyId }),
+          contentType: "application/json",
+          success: function (response) {
+            $("#confirmationModal").modal("hide");
+            showModal("Success", "UnMatch confirmed successfully!");
+            // Optionally, you can reload the page or update the tables with the new data
+            location.reload();
+          },
+          error: function (error) {
+            $("#confirmationModal").modal("hide");
+            showModal("ERROR", error.responseJSON.error);
+            unMatchButton.prop("disabled", false);
+            unMatchButton.html("Confirm");
+          },
+        });
+      } else {
+        $("#confirmationModal").modal("hide");
+        showModal("Info", "Please select a buddy");
+      }
+    });
+
+    $("#export-button").on("click", function () {
+      window.location.href = "/buddyprogram/match/export_excel";
+    });
+
+    $("#export-and-remove-button").on("click", function () {
+      $("#exportPeriodModal").modal("show");
+    });
+
+    $("#remove-everyone-button").on("click", function () {
+      $("#confirmationRemoveEveryoneModal").modal("show");
+    });
+
+    $("#confirm-remove-everyone-button").on("click", function () {
+      // First, download the Excel file
+      // window.location.href = "/admin/export_and_remove_all";
+      // setTimeout(function () {
+      //   window.location.href = "/buddyprogram/match/manual_match";
+      // }, 1500);
+      console.log("suca")
+
+        $.ajax({
+            url: "/admin/export_and_remove_all",
+            method: "GET",
+            xhrFields: {
+                responseType: 'blob'  // Handle binary data for file downloads
+            },
+            success: function(response, status, xhr) {
+                let disposition = xhr.getResponseHeader('Content-Disposition');
+                let filename = "export.xlsx";
+                
+                // Extract filename from Content-Disposition header if present
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    let matches = /filename="([^"]*)"/.exec(disposition);
+                    if (matches && matches[1]) filename = matches[1];
+                }
+
+                // Create a Blob from the response and trigger download
+                let blob = new Blob([response], { type: xhr.getResponseHeader('Content-Type') });
+                let link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                location.reload()
+            },
+            error: function(xhr) {
+                try {
+                    let jsonResponse = JSON.parse(xhr.responseText);
+                    $("#confirmationRemoveEveryoneModal").modal("hide");
+                    showModal("ERROR", xhr.statusText);
+                } catch (e) {
+                    showModal("ERROR", "An unexpected error occurred.");
+                }
+            }
+        });
+    });
+
+    $("#confirm-export-period-button").on("click", function () {
+      const semester = $("#semester-select").val();
+      const year = parseInt($("#year-input").val());
+      
+      if (!semester || !year) {
+        showModal("Error", "Please select both semester and year.");
+        return;
+      }
+      
+      const confirmButton = $("#confirm-export-period-button");
+      confirmButton.prop("disabled", true);
+      confirmButton.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+      
+      $.ajax({
+        url: "/admin/export_and_remove_all",
+        method: "POST",
+        data: JSON.stringify({
+          semester: semester,
+          year: year
+        }),
+        contentType: "application/json",
+        xhrFields: {
+          responseType: 'blob'
+        },
+        success: function(response, status, xhr) {
+          let disposition = xhr.getResponseHeader('Content-Disposition');
+          let filename = "export.xlsx";
+          
+          if (disposition && disposition.indexOf('attachment') !== -1) {
+            let matches = /filename="([^"]*)"/.exec(disposition);
+            if (matches && matches[1]) filename = matches[1];
+          }
+          
+          let blob = new Blob([response], { type: xhr.getResponseHeader('Content-Type') });
+          let link = document.createElement('a');
+          link.href = window.URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          $("#exportPeriodModal").modal("hide");
+          showModal("Success", "Export completed and filtered buddies removed successfully!");
+          
+          // Reload page after a short delay to ensure download starts
+          setTimeout(function() {
+            location.reload();
+          }, 1500);
+        },
+        error: function(xhr) {
+          confirmButton.prop("disabled", false).html('<i class="bi bi-file-earmark-excel"></i> Export & Remove All');
+          
+          // Handle JSON error responses
+          if (xhr.responseJSON) {
+            showModal("ERROR", xhr.responseJSON.error || xhr.responseJSON.message || "An error occurred during export.");
+          } else if (xhr.responseText) {
+            try {
+              let jsonResponse = JSON.parse(xhr.responseText);
+              showModal("ERROR", jsonResponse.error || jsonResponse.message || "An error occurred during export.");
+            } catch (e) {
+              showModal("ERROR", `Server error: ${xhr.status} ${xhr.error}`);
+            }
+          } else {
+            showModal("ERROR", `Network error: ${xhr.status} ${xhr.error}`);
+          }
+        }
+      });
+    });
+
+    let selectedBuddyId = null;
+
+    $(".remove-buddy-button").on("click", function () {
+      selectedBuddyId = $(this).data("buddy-id");
+      $("#removeBuddyModalBody").text(
+        `Are you sure you want to remove buddy ID: ${selectedBuddyId}?`
+      );
+      $("#removeBuddyModal").modal("show");
+    });
+
+    $("#confirm-remove-buddy-button").on("click", function () {
+      if (selectedBuddyId) {
+        const removeButton = $("#confirm-remove-buddy-button");
+        removeButton
+          .prop("disabled", true)
+          .html(
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Removing...'
+          );
+
+        $.ajax({
+          type: "POST",
+          url: "/buddyprogram/match/remove/buddy/" + selectedBuddyId,
+          success: function () {
+            $("#removeBuddyModal").modal("hide");
+            location.reload();
+          },
+          error: function () {
+            removeButton.prop("disabled", false).text("Remove");
+            $("#removeBuddyModal").modal("hide");
+
+            showModal("ERROR", error.responseJSON.error);
+          },
+        });
+      }
+    });
+
+    $("#buddies-search").on("keyup", function () {
+      const searchValue = $(this).val().toLowerCase();
+      $("#buddies-table tr.clickable-row-buddies").filter(function () {
+        // Get all the text content from this row's cells
+        const rowText = $(this).text().toLowerCase();
+        // Check if the row text contains the search value
+        const visible = rowText.indexOf(searchValue) > -1;
+        $(this).toggle(visible);
+
+        // Also hide the details row if the parent row is hidden
+        const detailsId = $(this).data("id");
+        if (!visible) {
+          $(`#details-buddies-${detailsId}`).hide();
+        }
+      });
+    });
+    // Search functionality for esners table
+    $("#esners-search").on("keyup", function () {
+      const searchValue = $(this).val().toLowerCase();
+      $("#esners-table tr.clickable-row-esners").filter(function () {
+        // Get all the text content from this row's cells
+        const rowText = $(this).text().toLowerCase();
+        // Check if the row text contains the search value
+        const visible = rowText.indexOf(searchValue) > -1;
+        $(this).toggle(visible);
+
+        // Also hide the details row if the parent row is hidden
+        const detailsId = $(this).data("id");
+        if (!visible) {
+          $(`#details-esners-${detailsId}`).hide();
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

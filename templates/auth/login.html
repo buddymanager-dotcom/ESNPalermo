@@ -1,0 +1,86 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-sm-6 col-md-5 col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="text-center text-primary mb-4">
+                        <i class="bi bi-person-circle"></i> Login
+                    </h2>
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="email" class="form-label text-muted">Email</label>
+                            <input type="email" class="form-control border-0 shadow-sm" id="email" name="email" required placeholder="Enter your email">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label text-muted">Password</label>
+                            <input type="password" class="form-control border-0 shadow-sm" id="password" name="password" required placeholder="Enter your password">
+                        </div>
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary" id="login-btn">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </button>
+                        </div>
+                        <div class="text-center">
+                            <small>
+                                <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none text-muted">
+                                    <i class="bi bi-key"></i> Forgot password?
+                                </a>
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    Don't have an account? 
+                    <a href="{{ url_for('esner.registration') }}" class="text-decoration-none text-primary">Register here</a>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function validateLoginForm() {
+    const form = document.getElementById('login-form');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+    }
+    return true;
+}
+
+document.getElementById('login-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const login_btn = $("#login-btn");
+    if (validateLoginForm()) {
+        const formData = {
+            email: $('#email').val(),
+            password: $('#password').val()
+        };
+        login_btn.prop('disabled', true);
+        login_btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...');
+
+        $.ajax({
+            type: 'POST',
+            url: '/auth/login',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            success: function(response) {
+                showModal('Success', 'Login successful!');
+                window.location.href = response.redirect;            
+            },
+            error: function(error) {
+                login_btn.prop('disabled', false);
+                login_btn.html('<i class="bi bi-box-arrow-in-right"></i> Login');
+                showModal('Error', error.responseJSON.error);
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}
